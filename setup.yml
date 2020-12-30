@@ -1,0 +1,105 @@
+- hosts: namenode
+  vars:
+  - name_directory: "/nn"
+  - name_port: "9001"
+  tasks:
+  - name: "Copy hadoop file from CN to MN"
+    copy:
+      src: "/root/hadoop-1.2.1-1.x86_64.rpm"
+      dest: "/hadoop.rpm"
+
+  - name: "Copy java file from CN to MN"
+    copy:
+      src: "/root/jdk-8u171-linux-x64.rpm"
+      dest: "/jdk.rpm"
+
+  - name: "Install JDK"
+    package:
+      name: "jdk"
+      state: present
+
+  - name: "Install Hadoop"
+    package:
+      name: "hadoop"
+      state: present
+
+  - name: "Create a directory to store the data"
+    file:
+      path: "{{  name_directory  }}"
+      state: directory
+
+  - name: "Configure hdfs-site file"
+    template:
+      src: "/root/hdfs-name-config.txt"
+      dest: "/etc/hadoop/hdfs-site.xml"
+    notify: 
+    - "Format Namenode"
+
+  - name: "Configure core-site file"
+    template:
+      src: "/root/core-config.txt"
+      dest: "/etc/hadoop/core-site.xml"
+    notify: 
+    - "Start Hadoop Namenode service"
+  
+  - name: "Enable Port Service for Hadoop"
+    firewalld:
+      port: "{{  name_port  }}/tcp"
+      state: enabled
+      immediate: yes
+
+  handlers:
+  - name: "Format Namenode"
+    shell: "echo Y | hadoop namenode -format"
+  
+  - name: "Start Hadoop Namenode service"
+    shell: "hadoop-daemon.sh start namenode"
+
+
+- hosts: datanode
+  vars:
+  - data_directory: "/dn"
+  - name_port: "9001"
+  tasks:
+  - name: "Copy hadoop file from CN to MN"
+    copy:
+      src: "/root/hadoop-1.2.1-1.x86_64.rpm"
+      dest: "/hadoop.rpm"
+
+  - name: "Copy java file from CN to MN"
+    copy:
+      src: "/root/jdk-8u171-linux-x64.rpm"
+      dest: "/jdk.rpm"
+
+  - name: "Install JDK"
+    package:
+      name: "jdk"
+      state: present
+
+  - name: "Install Hadoop"
+    package:
+      name: "hadoop"
+      state: present
+
+  - name: "Create a directory to store the data"
+    file:
+      path: "{{  data_directory  }}"
+      state: directory
+
+  - name: "Configure hdfs-site file"
+    template:
+      src: "/root/hdfs-data-config.txt"
+      dest: "/etc/hadoop/hdfs-site.xml"
+
+  - name: "Configure core-site file"
+    template:
+      src: "/root/core-config.txt"
+      dest: "/etc/hadoop/core-site.xml"
+    notify: 
+    - "Datanode Service" 
+  
+  handlers:
+  - name: "Datanode Service"
+    shell: "hadoop-daemon.sh start datanode"
+
+
